@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BacklogPilot AI Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: precise, calm product tool; a PO's working surface, not a marketing page
+   IDEA: an engineering datasheet for a backlog — request in, spec sheet out
+   PICTURE: the live agent run plus the generated backlog itself
+   COLOUR and TYPE: cobalt title strip, white, black, pale cobalt zones; Space Grotesk + Inter
+   LAYOUT: narrow strip, request panel left, result sheet right; stacks under 900px */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0a0d18);--ink:light-dark(#0d1020,#e8ebf7);--mute:light-dark(#5a6078,#9aa1bd);--zone:light-dark(#eef2ff,#131a33);--line:light-dark(#d6dcf3,#252e52);--co:#1240e0;--co2:light-dark(#1240e0,#7c9bff);--ok:light-dark(#0b7a43,#4fd18e);--warn:light-dark(#a15c00,#f0b45a);--card:light-dark(#fff,#0f1430)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3,.num{font-family:'Space Grotesk',Inter,sans-serif;font-weight:600}
+.strip{background:var(--co);color:#fff;padding:14px max(4vw,16px);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;justify-content:space-between}
+.strip h1{margin:0;font-size:26px;line-height:1.1}.strip p{margin:0;opacity:.9;font-size:14px}
+.wrap{max-width:1240px;margin:0 auto;padding:22px max(4vw,16px) 40px;display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px}
+@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--zone);border:1px solid var(--line);border-radius:10px;padding:16px}
+label{font-size:13px;font-weight:600;color:var(--mute);display:block;margin:0 0 6px}
+.picks{display:grid;gap:8px;margin-bottom:14px}
+.pick{all:unset;cursor:pointer;display:block;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:14px;min-height:44px}
+.pick[aria-pressed=true]{border-color:var(--co2);box-shadow:inset 3px 0 0 var(--co2)}
+.pick b{display:block;font-weight:600}.pick span{color:var(--mute);font-size:13px}
+.pick:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--co2);outline-offset:2px}
+textarea{width:100%;min-height:160px;font:15px/1.5 Inter,sans-serif;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
+.btn{font:600 15px Inter,sans-serif;border:0;border-radius:8px;padding:12px 16px;min-height:44px;cursor:pointer;background:var(--co);color:#fff}
+.btn.ghost{background:var(--card);color:var(--co2);border:1px solid var(--line);font-size:14px;padding:10px 12px}
+.btn:disabled{opacity:.55;cursor:wait}
+.go{width:100%;margin-top:12px}
+.note{font-size:13px;color:var(--mute);margin:10px 0 0}
+.steps{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:6px;font-size:14px}
+.steps li{display:flex;gap:8px;align-items:center;color:var(--mute)}
+.steps li i{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);flex:none}
+.steps li.run{color:var(--ink)}.steps li.run i{border-color:var(--co2);border-top-color:transparent;animation:spin .8s linear infinite}
+.steps li.done{color:var(--ink)}.steps li.done i{background:var(--ok);border-color:var(--ok)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.steps li.run i{animation:none}}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:40px 20px;text-align:center;color:var(--mute)}
+.head h2{margin:0 0 4px;font-size:30px;line-height:1.1;text-wrap:balance}.head p{margin:0 0 14px;color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+@media(max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--zone);border-radius:8px;padding:10px 12px}.stat .num{font-size:26px;line-height:1.1}.stat span{font-size:13px;color:var(--mute)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{all:unset;cursor:pointer;padding:10px 12px;font-size:14px;font-weight:500;color:var(--mute);border-bottom:2px solid transparent;min-height:24px}
+.tab[aria-selected=true]{color:var(--co2);border-color:var(--co2)}.tab:focus-visible{outline:2px solid var(--co2)}
+.epic{border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.epic>header{background:var(--zone);padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between}
+.epic>header h3{margin:0;font-size:17px}.epic>header span{font-size:13px;color:var(--mute)}
+.story{padding:12px 14px;border-top:1px solid var(--line)}
+.story .top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.story p{margin:0}.story .id{font-size:12px;color:var(--mute);font-weight:600}
+.chips{display:flex;gap:6px;flex:none}
+.chip{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--zone);white-space:nowrap}
+.chip.Must{background:var(--co);color:#fff}.chip.Should{color:var(--co2);border:1px solid var(--co2);background:none}
+.story ul{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--mute)}.story ul b{color:var(--ink);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:13px;color:var(--mute);font-weight:600;border-bottom:1px solid var(--line);padding:8px}
+td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
+td.r{text-align:right;white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:700px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.box{border:1px solid var(--line);border-radius:10px;padding:12px 14px}.box h3{margin:0 0 6px;font-size:16px}.box ul{margin:0;padding-left:18px}
+.sprint{display:grid;grid-template-columns:90px minmax(0,1fr) 60px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.bar{height:22px;background:var(--zone);border-radius:5px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%;background:var(--co);border-right:2px solid var(--bg)}.bar i.Should{background:var(--co2);opacity:.55}
+.sprint small{display:block;color:var(--mute);font-size:12px;grid-column:2/4}
+.vel{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+input[type=range]{width:200px;accent-color:var(--co)}
+.check{display:flex;gap:10px;align-items:flex-start;padding:6px 0}.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--co)}
+.exp{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.toast{font-size:13px;color:var(--ok);align-self:center}
+pre,.scroll{overflow-x:auto}
+footer{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px) 30px;font-size:13px;color:var(--mute)}footer a{color:var(--co2)}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<div class="strip"><h1>BacklogPilot</h1><p>An AI copilot for Product Owners: from business request to a sprint-ready AI backlog</p></div>
+<div class="wrap">
+  <aside>
+    <div class="panel">
+      <label>1. Pick a business request</label>
+      <div class="picks" id="picks"></div>
+      <label for="req">2. Request from the business</label>
+      <textarea id="req" readonly></textarea>
+      <button class="btn go" id="go">Generate backlog</button>
+      <ol class="steps" id="steps"></ol>
+      <p class="note">Demo mode: the agent's outputs are pre-written samples for these three requests, so the demo runs anywhere at no cost. All targets are illustrative.</p>
+    </div>
+  </aside>
+  <main id="out"><div class="empty">Pick a request and click <b>Generate backlog</b> to watch the agent work.</div></main>
+</div>
+<footer>Built by Pia Rahman, AI Product Manager · <a href="https://github.com/mpiarahman16">github.com/mpiarahman16</a> · Sample data only; not affiliated with any company.</footer>
+<script>
+{
+const D=[
+{id:'addr',name:'Smart address validation',tag:'Shipping SaaS · AI suggestions',
+req:'Our small-business shipping customers lose money on packages returned for bad addresses. We want AI to flag and fix risky addresses before a label is printed. Goal: pilot next quarter with a measurable drop in returns.',
+goal:'Cut returned packages by catching bad addresses before the label prints',
+brs:[['BR-1','Flag risky addresses before a label is printed'],['BR-2','Suggest a corrected address with a confidence score'],['BR-3','A person confirms low-confidence fixes; every change is logged'],['BR-4','Track return rate, cost avoided, and AI cost']],
+epics:[
+{id:'E1',t:'Address risk scoring',br:'BR-1',s:[
+['S1','As a shipping clerk, I want each address scored for delivery risk before I print a label, so that I catch problems early.',5,'Must',['Given an address is entered, when I click Print, then a low / medium / high risk score appears within 1.5 seconds','High-risk addresses cannot print until reviewed','Score and reason are logged with the shipment ID'],'Offline eval on 2,000-address gold set'],
+['S2','As an account admin, I want to set the risk threshold for my team, so that I control how often clerks are interrupted.',3,'Should',['Threshold can be set to low, medium, or high','Change is recorded in the audit log with user and time'],'UAT with 3 pilot admins']]},
+{id:'E2',t:'AI correction suggestions',br:'BR-2, BR-3',s:[
+['S3','As a shipping clerk, I want the AI to suggest a corrected address with a confidence score, so that I can fix errors in one click.',8,'Must',['Suggestion is checked against the carrier address API (tool call) before it is shown','Confidence below 0.85 is sent to a person to confirm','The AI never changes the recipient name'],'Precision ≥ 95% on gold set'],
+['S4','As a shipping clerk, I want to accept, edit, or reject a suggestion, so that I stay in control.',3,'Must',['Three actions available on every suggestion','Rejections are captured as feedback for the eval set'],'UI test + feedback log check'],
+['S5','As a compliance reviewer, I want every accepted change logged with before and after values, so that we are audit-ready.',3,'Must',['Log holds old value, new value, model version, confidence, user','Logs are kept 7 years and cannot be edited'],'Audit log review']]},
+{id:'E3',t:'Measurement and rollout',br:'BR-4',s:[
+['S6','As a product owner, I want a dashboard of return rate and cost avoided for pilot vs. control accounts, so that I can prove value.',5,'Should',['Shows weekly return rate, pilot vs. control','Shows cost avoided and AI cost per validation'],'Dashboard numbers match source data'],
+['S7','As an engineering lead, I want latency, error rate, and cost per call monitored with alerts, so that issues are caught fast.',3,'Should',['Alert if p95 latency > 1.5 s for 15 minutes','Daily cost report by account'],'Load test at 2× pilot volume'],
+['S8','As a product owner, I want the feature behind a flag for 50 pilot accounts, so that we can roll out and roll back safely.',2,'Must',['Feature flag per account','Rollback in under 5 minutes'],'Rollback drill']]}],
+metrics:[['Correction precision','≥ 95%','Offline eval on 2,000 labeled addresses'],['Returned packages','−20% vs. control','A/B test, 4-week pilot'],['Human override rate','< 10%','Accept / edit / reject logs'],['Latency (p95)','≤ 1.5 s','Observability dashboard'],['Cost per validation','≤ $0.002','Model + API usage report']],
+guard:['Never change the recipient name','Only show addresses the carrier API confirms','Mask personal data in logs and prompts'],
+hitl:['Confidence below 0.85 needs a person to confirm','High-value shipments always confirmed by a person'],
+obs:['Log prompt version, model, confidence, and outcome','Weekly drift review of override rate','Cost and latency alerts'],
+poc:['AI suggestions cut returned packages by 20% for pilot accounts','50 accounts, 4 weeks, A/B vs. control','Scale if returns drop ≥ 15% and precision ≥ 95%; otherwise tune and re-test']},
+{id:'rag',name:'Support answer assistant (RAG)',tag:'Customer support · Retrieval-augmented generation',
+req:'Support gets a large share of tickets on the same billing and postage-meter questions. We want an AI assistant that answers from our approved help articles, shows its sources, and hands off to a person when it cannot help.',
+goal:'Deflect repeat support tickets with grounded, cited answers',
+brs:[['BR-1','Answer common questions only from approved help articles, with citations'],['BR-2','Hand off to a support agent with full context'],['BR-3','Keep answers accurate and block risky actions'],['BR-4','Measure deflection, satisfaction, and cost']],
+epics:[
+{id:'E1',t:'Knowledge retrieval',br:'BR-1',s:[
+['S1','As a support lead, I want approved help articles indexed nightly, so that answers stay current.',5,'Must',['Only articles marked "approved" are indexed','Retired articles are removed within 24 hours'],'Index audit vs. help center'],
+['S2','As a customer, I want answers with links to the source article, so that I can trust them.',8,'Must',['Every answer cites at least one article','If nothing relevant is found, the assistant says so and offers a person'],'Groundedness ≥ 95% on golden set']]},
+{id:'E2',t:'Human handoff',br:'BR-2',s:[
+['S3','As a customer, I want to reach a person when the assistant cannot help, so that I am not stuck.',5,'Must',['Handoff when confidence is low, on request, or after 2 failed tries','Customer is told the expected wait time'],'Conversation test scripts'],
+['S4','As a support agent, I want a summary of the conversation on handoff, so that the customer does not repeat themselves.',3,'Should',['Summary under 80 words with question, steps tried, and articles shown'],'Agent review of 50 summaries']]},
+{id:'E3',t:'Quality, safety, and measurement',br:'BR-3, BR-4',s:[
+['S5','As a product owner, I want 300 golden questions run on every prompt or model change, so that quality never slips silently.',5,'Must',['Release blocked if accuracy drops more than 2 points','Results stored with prompt and model version'],'Eval pipeline in CI'],
+['S6','As a compliance lead, I want the assistant blocked from changing billing or account data, so that it only informs.',3,'Must',['No write tools are available to the assistant','Account-specific billing questions go to a person'],'Red-team test set of 40 prompts'],
+['S7','As a support director, I want a dashboard of deflection, CSAT, and cost per conversation, so that I can report value.',5,'Should',['Weekly deflection and CSAT trend','Cost per conversation by model'],'Numbers match ticketing system']]}],
+metrics:[['Groundedness','≥ 95%','Answers supported by cited article (golden set)'],['Answer accuracy','≥ 90%','300-question golden set'],['Ticket deflection','25% in 8 weeks','Ticketing system, pilot queue'],['CSAT','≥ 4.2 / 5','Post-chat survey'],['Cost per conversation','≤ $0.03','Model usage report']],
+guard:['Answer only from approved articles','No tools that change account or billing data','Refuse and hand off on legal, refund, or dispute topics'],
+hitl:['Low confidence or 2 failed tries → support agent','Weekly review of 50 random conversations'],
+obs:['Trace each answer: query, retrieved articles, prompt version','Track "no answer" rate to find content gaps','Latency and cost per conversation'],
+poc:['A RAG assistant can resolve 25% of billing and meter tickets without a person','One support queue, 6 weeks','Scale if deflection ≥ 20% and CSAT holds at ≥ 4.2']},
+{id:'exc',name:'Delivery exception agent',tag:'Operations · AI agent with tool calling',
+req:'Our ops team manually reviews thousands of delayed or damaged parcel exceptions each day. We want an AI agent that sorts each exception, checks carrier tracking, and drafts the customer notice, with people approving any claim.',
+goal:'Cut exception handle time while keeping people in charge of claims',
+brs:[['BR-1','Classify each exception by type'],['BR-2','Pull the latest carrier tracking with a tool call'],['BR-3','Draft the customer notice from approved templates'],['BR-4','A person approves every claim over $100'],['BR-5','Measure handle time, auto-resolve rate, and cost']],
+epics:[
+{id:'E1',t:'Classification and tool calling',br:'BR-1, BR-2',s:[
+['S1','As an ops analyst, I want each exception sorted into one of 6 types, so that it reaches the right queue.',5,'Must',['Types: delayed, damaged, lost, wrong address, refused, customs','Confidence below 0.8 goes to manual review'],'Accuracy ≥ 92% on 1,500 labeled exceptions'],
+['S2','As an ops analyst, I want the agent to call the carrier tracking API and attach the latest scan, so that I do not look it up by hand.',5,'Must',['Tool call retried twice on failure','If tracking is unavailable, the case is flagged, not guessed'],'Tool-call success ≥ 99%'],
+['S3','As an engineering lead, I want a fallback path when the carrier API is down, so that the queue keeps moving.',3,'Should',['Cases queue for retry; ops is alerted after 10 minutes'],'Outage simulation']]},
+{id:'E2',t:'Customer communication',br:'BR-3',s:[
+['S4','As an ops analyst, I want the agent to draft the customer notice from approved templates, so that messages are fast and on-brand.',3,'Must',['Only approved templates are used','No promises of refunds or dates not in tracking data'],'Review of 100 drafts'],
+['S5','As an ops analyst, I want to edit or approve each notice before it is sent, so that I stay accountable.',3,'Must',['Nothing is sent without approval in the pilot','Edits are saved as feedback'],'UI test']]},
+{id:'E3',t:'Claims, governance, and reporting',br:'BR-4, BR-5',s:[
+['S6','As a claims manager, I want every claim over $100 routed to a person for approval, so that no money moves without sign-off.',5,'Must',['Agent cannot approve or pay claims','Approver, amount, and reason are logged'],'Zero unapproved claims in pilot'],
+['S7','As a compliance reviewer, I want an audit trail of every agent step and tool call, so that we can explain any decision.',3,'Must',['Each step logged with inputs, outputs, and model version'],'Audit sample of 30 cases'],
+['S8','As an ops director, I want a dashboard of handle time, auto-resolve rate, and cost per exception, so that I can track value.',5,'Should',['Daily trend, pilot vs. baseline'],'Numbers match ops system']]}],
+metrics:[['Classification accuracy','≥ 92%','1,500 labeled exceptions'],['Tool-call success','≥ 99%','Agent trace logs'],['Average handle time','−30% vs. baseline','Ops system, 6-week pilot'],['Unapproved claims','0','Claims audit log'],['Cost per exception','≤ $0.05','Model + API usage report']],
+guard:['Agent has read-only tools; it cannot pay or approve claims','Only approved notice templates','Never invent tracking dates'],
+hitl:['Every claim over $100 approved by a person','All customer notices approved during the pilot'],
+obs:['Full trace of agent steps and tool calls','Alert on tool-call failure spikes','Cost per exception by model'],
+poc:['An AI agent can cut exception handle time by 30% with no unapproved claims','One ops team, 6 weeks','Scale if handle time drops ≥ 25% and accuracy ≥ 92%']}];
+
+const STEPS=['Reading the business request','Mapping business requirements','Drafting epics and user stories','Writing acceptance criteria','Defining AI success criteria and guardrails','Building the traceability matrix','Planning sprints from team velocity'];
+const GOV=['Model review and sign-off before pilot','Data handling review: personal data masked, retention set','Human-in-the-loop rules documented','Audit log reviewed by compliance','Rollback plan tested','Change management: training and release notes for users'];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+let cur=D[0],tab='backlog',vel=13,busy=false;
+const stories=x=>x.epics.flatMap(e=>e.s.map(s=>({id:s[0],t:s[1],pts:s[2],pri:s[3],ac:s[4],test:s[5],epic:e.id,et:e.t,br:e.br})));
+const rank={Must:0,Should:1,Could:2};
+function plan(x){const q=stories(x).sort((a,b)=>rank[a.pri]-rank[b.pri]);const sp=[];for(const s of q){let t=sp.find(p=>p.pts+s.pts<=vel);if(!t){t={pts:0,s:[]};sp.push(t)}t.pts+=s.pts;t.s.push(s)}return sp}
+
+function picks(){$('picks').innerHTML=D.map(x=>`<button class="pick" data-id="${x.id}" aria-pressed="${x===cur}"><b>${esc(x.name)}</b><span>${esc(x.tag)}</span></button>`).join('');$('req').value=cur.req}
+$('picks').addEventListener('click',e=>{const b=e.target.closest('.pick');if(!b||busy)return;cur=D.find(x=>x.id===b.dataset.id);picks();$('steps').innerHTML='';$('out').innerHTML='<div class="empty">Click <b>Generate backlog</b> to run the agent on this request.</div>'});
+
+$('go').addEventListener('click',()=>{if(busy)return;busy=true;$('go').disabled=true;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;let i=0;
+ const draw=()=>{$('steps').innerHTML=STEPS.map((s,k)=>`<li class="${k<i?'done':k===i?'run':''}"><i></i>${esc(s)}</li>`).join('')};
+ const tick=()=>{draw();if(i<STEPS.length){i++;setTimeout(tick,reduce?60:520)}else{busy=false;$('go').disabled=false;tab='backlog';render()}};tick()});
+
+function render(){const st=stories(cur),pts=st.reduce((a,s)=>a+s.pts,0),sp=plan(cur);
+ const T=[['backlog','Backlog'],['ai','AI success criteria'],['trace','Traceability'],['sprints','Sprint plan'],['gov','Pilot and governance']];
+ $('out').innerHTML=`<div class="head"><h2>${esc(cur.goal)}</h2><p>Generated from the request in ${STEPS.length} agent steps</p></div>
+ <div class="stats"><div class="stat"><div class="num">${cur.epics.length}</div><span>Epics</span></div><div class="stat"><div class="num">${st.length}</div><span>User stories</span></div><div class="stat"><div class="num">${pts}</div><span>Story points</span></div><div class="stat"><div class="num" id="spn">${sp.length}</div><span>Sprints at velocity <b id="vn">${vel}</b></span></div></div>
+ <div class="tabs" role="tablist">${T.map(([k,l])=>`<button class="tab" role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join('')}</div>
+ <div id="pane"></div>
+ <div class="exp"><button class="btn ghost" id="cmd">Copy as Markdown</button><button class="btn ghost" id="ccsv">Copy Jira CSV</button>${top()?'<button class="btn ghost" id="dcsv">Download Jira CSV</button>':''}<span class="toast" id="toast" aria-live="polite"></span></div>`;
+ pane()}
+const top=()=>{try{return window.self===window.top}catch(e){return false}};
+
+function pane(){const p=$('pane');if(!p)return;
+ if(tab==='backlog')p.innerHTML=cur.epics.map(e=>`<section class="epic"><header><h3>${e.id} · ${esc(e.t)}</h3><span>${e.s.reduce((a,s)=>a+s[2],0)} pts · traces to ${esc(e.br)}</span></header>${e.s.map(s=>`<div class="story"><div class="top"><div><div class="id">${s[0]}</div><p>${esc(s[1])}</p></div><div class="chips"><span class="chip ${s[3]}">${s[3]}</span><span class="chip">${s[2]} pts</span></div></div><ul>${s[4].map(a=>`<li>${esc(a)}</li>`).join('')}<li><b>Test:</b> ${esc(s[5])}</li></ul></div>`).join('')}</section>`).join('');
+ if(tab==='ai')p.innerHTML=`<table class="stack"><thead><tr><th>Success metric</th><th>Target</th><th>How we measure it</th></tr></thead><tbody>${cur.metrics.map(m=>`<tr><td>${esc(m[0])}</td><td class="r">${esc(m[1])}</td><td>${esc(m[2])}</td></tr>`).join('')}</tbody></table>
+ <div class="grid2" style="margin-top:14px">${[['Guardrails',cur.guard],['Human in the loop',cur.hitl],['Observability',cur.obs]].map(([h,l])=>`<div class="box"><h3>${h}</h3><ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+ if(tab==='trace')p.innerHTML=`<div class="scroll"><table class="stack"><thead><tr><th>Requirement</th><th>Epic</th><th>Stories</th><th>Verified by</th></tr></thead><tbody>${cur.brs.map(([id,t])=>{const ss=stories(cur).filter(s=>s.br.split(', ').includes(id));return `<tr><td><b>${id}</b> ${esc(t)}</td><td>${[...new Set(ss.map(s=>s.epic))].join(', ')||'—'}</td><td>${ss.map(s=>s.id).join(', ')||'—'}</td><td>${ss.map(s=>esc(s.test)).join('<br>')||'—'}</td></tr>`}).join('')}</tbody></table></div>`;
+ if(tab==='sprints'){const sp=plan(cur);p.innerHTML=`<div class="vel"><label for="v" style="margin:0">Team velocity (points per 2-week sprint)</label><input type="range" id="v" min="8" max="30" value="${vel}"><b class="num">${vel}</b></div>
+ ${sp.map((s,k)=>`<div class="sprint"><b>Sprint ${k+1}</b><div class="bar" title="${s.pts} of ${vel} points">${s.s.map(x=>`<i class="${x.pri}" style="width:${x.pts/vel*100}%"></i>`).join('')}</div><span class="r num">${s.pts}/${vel}</span><small>${s.s.map(x=>`${x.id} (${x.pts})`).join(' · ')}</small></div>`).join('')}
+ <p class="note">Must-have stories are scheduled first. About ${sp.length*2} weeks to deliver the full backlog at this velocity.</p>`;
+ $('v').addEventListener('input',e=>{vel=+e.target.value;$('vn').textContent=vel;$('spn').textContent=plan(cur).length;pane()})}
+ if(tab==='gov')p.innerHTML=`<div class="grid2"><div class="box"><h3>Proof of concept, run as an experiment</h3><ul><li><b>Hypothesis:</b> ${esc(cur.poc[0])}</li><li><b>Scope:</b> ${esc(cur.poc[1])}</li><li><b>Decision rule:</b> ${esc(cur.poc[2])}</li></ul></div><div class="box"><h3>AI governance checklist</h3>${GOV.map((g,k)=>`<label class="check" style="color:var(--ink);font-weight:400;font-size:14px"><input type="checkbox" id="g${k}">${esc(g)}</label>`).join('')}</div></div>`;
+}
+$('out').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t){tab=t.dataset.t;document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===tab));pane();return}
+ if(e.target.id==='cmd')copy(md(),'Markdown copied');if(e.target.id==='ccsv')copy(csv(),'Jira CSV copied');
+ if(e.target.id==='dcsv'){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv()],{type:'text/csv'}));a.download='backlogpilot-'+cur.id+'.csv';a.click()}catch(err){say('Download blocked here; use Copy')}}});
+function say(m){const t=$('toast');if(t){t.textContent=m;setTimeout(()=>{if(t)t.textContent=''},2500)}}
+function copy(txt,m){try{navigator.clipboard.writeText(txt).then(()=>say(m),()=>say('Copy blocked by the browser'))}catch(e){say('Copy blocked by the browser')}}
+function md(){let o=`# ${cur.goal}\n\n> ${cur.req}\n\n`;for(const e of cur.epics){o+=`## ${e.id}: ${e.t} (${e.br})\n`;for(const s of e.s)o+=`- **${s[0]}** [${s[3]}, ${s[2]} pts] ${s[1]}\n${s[4].map(a=>`  - AC: ${a}`).join('\n')}\n  - Test: ${s[5]}\n`;o+='\n'}
+ o+='## AI success criteria\n| Metric | Target | Measured by |\n|---|---|---|\n'+cur.metrics.map(m=>`| ${m.join(' | ')} |`).join('\n');return o}
+function csv(){const q=v=>'"'+String(v).replace(/"/g,'""')+'"';return ['Summary,Issue Type,Description,Story Points,Priority,Epic Name,Labels'].concat(stories(cur).map(s=>[q(s.t),'Story',q(s.ac.map(a=>'- '+a).join('\n')+'\nTest: '+s.test),s.pts,s.pri==='Must'?'High':'Medium',q(s.epic+' '+s.et),'ai-backlog'].join(','))).join('\n')}
+picks();
+}
+</script>
+</body>
+</html>
